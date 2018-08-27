@@ -55,32 +55,37 @@ func CalcPI(c1 chan float64) {
 
 }
 
+//返回一个单向的 channel  它只能取
+func boring(c1 chan float64, i float64, looptime int) <-chan float64 {
+	//iv := 4 * math.Pow(-1, i) / (2*i + 1)
+	iv := math.Pow(-1, i) * (4 / float64(2*i+1))
+	//fmt.Println("iv", iv)
+	c1 <- iv
+
+	// 这样似乎不对 因为 goroutine 是争抢执行的  靠 index 来判断是不行的
+	if i >= float64(looptime-1) {
+		close(c1)
+	}
+	return c1
+
+}
+
 func CalcPI2() {
 	c1 := make(chan float64)
 	pi := 0.0
-	looptime := 100000
+	looptime := 10000
 
 	//stop:= make(chan bool)
 
 	for i := 0.0; i < float64(looptime); i++ {
-		go func(i float64) {
-			//iv := 4 * math.Pow(-1, i) / (2*i + 1)
-			iv := math.Pow(-1, i) * (4 / float64(2*i+1))
-			//fmt.Println("iv", iv)
-			c1 <- iv
-
-			// 这样似乎不对 因为 goroutine 是争抢执行的  靠 index 来判断是不行的
-			if i >= float64(looptime-1) {
-				close(c1)
-			}
-
-		}(float64(i))
+		go boring(c1, float64(i), looptime)
 	}
 
 	//for i:=0; i< looptime; i++{
 	//	pi += <- c1
 	//}
 
+	//循环接收消息可以用 range  相比上面的方式更简单一些
 	//使用 range 需要显式的关闭 channel
 	for v := range c1 {
 		pi = pi + float64(v)
